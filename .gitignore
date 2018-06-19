@@ -1,0 +1,19 @@
+# dependencies
+node_modules
+
+# misc
+.DS_Store
+*~
+
+
+#ignore shapefiles
+*.prj
+*.sbn
+*.shx
+*.sbx
+*.shp
+*.dbf
+*.xml
+\.idea/
+
+*.pickle
