@@ -1,69 +1,144 @@
 import React, { Component } from 'react';
 import mapboxgl from 'mapbox-gl'
 import './App.css';
-import quartieri from './data/Milano_quartieri.js';
-import unitaTrasporti from './data/Milano_TPL.js';
-import unitaFarmacie from './data/Milano_farmacie.js';
-import intensitaTrasporti from './data/Milano_Trasporti.js';
-import intensitaFarmacie from './data/Milano_Salute.js';
-import * as colorScale from 'd3-scale-chromatic';
+import Legend from './Legend';
+
+import quartieriGeojson from './data/Milano_quartieri.js';
+
+import trasportiGeojson from './data/Milano_TPL.js';
+import farmacieGeojson from './data/Milano_farmacie.js';
+import bibliotecheGeojson from './data/Milano_biblioteche.js';
+import scuoleGeojson from './data/Milano_scuole.js';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiZW5qYWxvdCIsImEiOiJjaWhtdmxhNTIwb25zdHBsejk0NGdhODJhIn0.2-F2hS_oTZenAWc0BMf_uw';
 
-var dataField = 'Pharmacy';
-var dataSource = 'UnitaFarmacie';
-var unita = unitaFarmacie;
-var intensita = 'intensitaFarmacie';
-var intensitaSource = intensitaFarmacie;
-/*
-var dataField = 'TransportStop';
-var dataSource = 'UnitaTrasporti';
-var unita = unitaTrasporti;
-var intensita = 'intensitaTrasporti';
-var intensitaSource = intensitaTrasporti;
-*/
 class App extends Component {
     map;
-/*
-    constructor(props) {
-	super(props);
 
-	this.layers = document.getElementById('menu-ui');
-    }
-  */  
-    componentDidMount() {
+    layers = [{
+        'id': 'UnitaFarmacie',
+	'label': 'Farmacie',
+        'geojson': farmacieGeojson,
+        'geojsonProperty': 'Affluenza',
+        'type': 'circle',
+        'source': 'UnitaFarmacie',
+        'layout': {
+            'visibility': 'none'
+        },
+        'paint': {
+            'circle-color': {
+		property: 'Affluenza',
+		stops: [[0, 'blue'], [Math.max(...farmacieGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
+	    },
+            'circle-opacity': 1,
+            'circle-radius': 5,
+            'circle-stroke-width': 1
+        }
+    },{
+        'id': 'UnitaTrasporti',
+	'label': 'Trasporti',
+        'geojson': trasportiGeojson,
+        'geojsonProperty': 'Affluenza',
+        'type': 'circle',
+        'source': 'UnitaTrasporti',
+        'layout': {
+            'visibility': 'none'
+        },
+        'paint': {
+	    'circle-color': {
+                property: 'Affluenza',
+		stops: [[0, 'blue'], [Math.max(...trasportiGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
+            },
+            'circle-radius': 3,
+            'circle-stroke-width': 1
+        }
+    },{
+        'id': 'UnitaBiblioteche',
+        'label': 'Biblioteche',
+        'geojson': bibliotecheGeojson,
+        'geojsonProperty': 'Affluenza',
+        'type': 'circle',
+        'source': 'UnitaBiblioteche',
+        'layout': {
+            'visibility': 'none'
+        },
+        'paint': {
+            'circle-color': {
+                property: 'Affluenza',
+                stops: [[0, 'blue'], [Math.max(...bibliotecheGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
+            },
+            'circle-radius': 5,
+            'circle-stroke-width': 1
+        }
+    },{
+        'id': 'UnitaScuole',
+        'label': 'Scuole',
+        'geojson': scuoleGeojson,
+        'geojsonProperty': 'Affluenza',
+        'type': 'circle',
+        'source': 'UnitaScuole',
+        'layout': {
+            'visibility': 'none'
+        },
+        'paint': {
+            'circle-color': {
+                property: 'Affluenza',
+                stops: [[0, 'blue'], [Math.max(...scuoleGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
+            },
+            'circle-radius': 5,
+            'circle-stroke-width': 1
+        }
+    }];
+
+    constructor(props: Props) {
+	super(props);
+	this.state = {
+	    active: this.layers[0]
+	};
+    };
+
+    componentDidMount() {	
 	this.createMap();
     };
-/*
-    addLayer(layer, name, zIndex) {
-	layer
-            .setZIndex(zIndex)
-            .addTo(map);
-	
-	// Create a simple layer switcher that
-	// toggles layers on and off.
-	var link = document.createElement('a');
-        link.href = '#';
-        link.className = 'active';
-        link.innerHTML = name;
-	
-	link.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-	    
-            if (map.hasLayer(layer)) {
-		map.removeLayer(layer);
-		this.className = '';
-            } else {
-		map.addLayer(layer);
-		this.className = 'active';
-            }
-	};
+    
+    addLayer(layer, zIndex) {
+	var map = this.map;
 
-	this.layers.appendChild(link);
-    }
-  */  		
-    createMap() {
+	// Add layer
+	map.addSource(layer.id, {
+            type: 'geojson',
+            data: layer.geojson
+        });
+	map.addLayer(layer);
+
+	// Add popup
+        var popup = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
+        map.on('mouseenter', layer.id, function(e) {
+            map.getCanvas().style.cursor = 'pointer';
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var description = Object.keys(e.features[0].properties).map(p=> p + ": " + e.features[0].properties[p]).join("<br>");
+            popup.setLngLat(coordinates)
+                .setHTML(description)
+                .addTo(map);
+        });
+        map.on('mouseleave', layer.id, function() {
+            map.getCanvas().style.cursor = '';
+            popup.remove();
+        });
+    };
+
+    componentWillUpdate(nextProps, nextState){
+	if (this.state.active.id !== nextState.active.id) {
+	    this.map.setLayoutProperty(nextState.active.id, 'visibility', 'visible');
+	    this.map.setLayoutProperty(this.state.active.id, 'visibility', 'none');
+            this.setState({ id: this.state.active.id });
+	}
+    };
+
+    createMap() {	
 	this.map = new mapboxgl.Map({
 	    container: this.mapContainer,
 	    style: 'mapbox://styles/mapbox/light-v9',
@@ -71,34 +146,12 @@ class App extends Component {
 	    zoom: 11
 	});
 
-	this.map.on('load', () => {
-	    //set input data
-	    quartieri.features = quartieri.features.map(d => {
-                var id = d.properties.IDquartiere;
+	var map = this.map;
 
-                d.properties[intensita] = intensitaSource
-                    .filter(d => {
-                        return d.IDquartiere === id;
-                    })[0][dataField][4];
-                return d;
-            });
-	    var values = quartieri.features.map(d => d.properties[intensita]);
-	    var affluenza = unita.features.map(d => d.properties["Affluenza"]);
-	    
-            var L = 7;
-            values = sample(values, L);
-
-	    affluenza = sample(affluenza, L);     
-            var seq = Array.apply(null, {length: L})
-                .map(Function.call, Number)
-                .map(n => n/L);
-            var colors = seq.map(s => colorScale.interpolateReds(s));
-
-
-	    var map = this.map;
+	map.on('load', () => {
 	    map.addSource('Quartieri', {
 		type: 'geojson',
-		data: quartieri
+		data: quartieriGeojson
 	    });
 	    var layers = map.getStyle().layers;
 	    this.firstSymbolId;
@@ -108,24 +161,7 @@ class App extends Component {
 		    break;
 		}
 	    };
-		
-	    map.addLayer({
-		id: 'Quartieri',
-		type: 'fill',
-		paint: {'fill-opacity': 0},
-		layout: {},
-		source: 'Quartieri'
-	    }, this.firstSymbolId);
-	    /*
-	    map.setPaintProperty(
-		'Quartieri',
-		'fill-color',
-		{
-		    'property': intensita,
-		    'stops': values.map((d, i) => [values[i], colors[i]]),
-		    'default': 'red'
-		});
-	    */
+
 	    map.addLayer({
 		id: 'Quartieri-line',
 		type: 'line',
@@ -133,57 +169,24 @@ class App extends Component {
 		source: 'Quartieri'
 	    }, this.firstSymbolId);
 
-	    map.addSource(dataSource, {
-		type: 'geojson',
-		data: unita
-	    });
-
-	    map.addLayer({
-                id: dataSource,
-                type: 'circle',
-                paint: {'circle-radius': 5, 'circle-stroke-width': 1, 'circle-stroke-color': 'black'},
-                layout: {},
-                source: dataSource
-            }, this.firstSymbolId);
-
-	    map.setPaintProperty(
-		dataSource,
-		'circle-color',
-		{
-		    'property': "Affluenza",
-		    'stops': affluenza.map((d, i) => [affluenza[i], colors[i]]),
-		    'default': 'red' 
-		});
-
-	    // Create a popup, but don't add it to the map yet.
-	    var popup = new mapboxgl.Popup({
-		closeButton: false,
-		closeOnClick: false
-	    });
-
-	    map.on('mouseenter', dataSource, function(e) {
-		map.getCanvas().style.cursor = 'pointer';
-
-		var coordinates = e.features[0].geometry.coordinates.slice();
-		var description = "Farmacia \"" + e.features[0].properties.DESCRIZIONEFARMACIA + "\"<br/>Affluenza " + Math.floor(e.features[0].properties.Affluenza);
-				
-		// Populate the popup and set its coordinates
-		// based on the feature found.
-		popup.setLngLat(coordinates)
-		    .setHTML(description)
-		    .addTo(map);
-	    });
-
-	    map.on('mouseleave', dataSource, function() {
-		map.getCanvas().style.cursor = '';
-		popup.remove();
-	    });
-
+	    this.layers.forEach((l, i) => this.addLayer(l, i+1));
+	    map.setLayoutProperty(this.state.active.id, 'visibility', 'visible');
 	});
+
     };
 
     render() {
+	const renderToggle = (layer, i) => {    	    
+	    return (
+		    <label key={i} className="toggle-container">
+		        <input onChange={() => this.setState({ active: layer })} checked={layer.id === this.state.active.id} name="toggle" type="radio" />
+		        <div className="toggle txt-s py3 toggle--active-white">{layer.label}</div>
+		    </label>
+	    );
+	};
+	
 	return (
+	    <div>
 		<div id='mapContainer'
 	            ref={el => this.mapContainer = el}
 	            style={{
@@ -191,15 +194,22 @@ class App extends Component {
 		        width: '100vw'
 	            }}
 		/>
+		<div className='toggle-group absolute top left ml12 mt12 border border--2 border--white bg-white shadow-darken10 z1'>
+                    {this.layers.map(renderToggle)}
+                </div>
+                <div className='legend-overlay'
+                    id='legend'>
+                    <Legend
+                        stops={this.state.active.paint['circle-color'].stops}
+                        style={{
+                            width: 700,
+                            height: 60
+                        }}
+                    />
+                </div>
+	    </div>
 	);
     };
-};
-
-function sample(values, C) {
-    var min = Math.min(...values),
-	max = Math.max(...values);
-    return [...Array(C).keys()]
-	.map((d) => d * (max - min) / (C - 1.1)  + min);
 };
 
 export default App;
