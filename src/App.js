@@ -11,17 +11,17 @@ import bibliotecheGeojson from './data/Milano_biblioteche.js';
 import scuoleGeojson from './data/Milano_scuole.js';
 
 const parameters = [
-    {'id': 'UnitaFarmacie', 'label': 'Farmacie', 'geojson': farmacieGeojson, 'radius': 5},
-    {'id': 'UnitaTrasporti', 'label': 'Trasporti', 'geojson': trasportiGeojson, 'radius': 3},
-    {'id': 'UnitaBiblioteche', 'label': 'Biblioteche', 'geojson': bibliotecheGeojson, 'radius': 5},
-    {'id': 'UnitaScuole', 'label': 'Scuole', 'geojson': scuoleGeojson, 'radius': 5, 'capacity': 'ALUNNI'}
+    {'id': 'UnitaFarmacie', 'label': 'Farmacie', 'geojson': farmacieGeojson, 'radius': 5, 'description': ['DESCRIZIONEFARMACIA', 'INDIRIZZO', 'DATAINIZIOVALIDITA', 'DESCRIZIONETIPOLOGIA', 'CODICETIPOLOGIA', 'Affluenza']},
+    {'id': 'UnitaTrasporti', 'label': 'Trasporti', 'geojson': trasportiGeojson, 'radius': 3, 'description': ['route_id', 'stop_name', 'Affluenza']},
+    {'id': 'UnitaBiblioteche', 'label': 'Biblioteche', 'geojson': bibliotecheGeojson, 'radius': 5, 'description': ['denominazioni.ufficiale', 'ente', 'indirizzo.via-piazza', 'tipologia-amministrativa', 'tipologia-funzionale', 'Affluenza']},
+    {'id': 'UnitaScuole', 'label': 'Scuole', 'geojson': scuoleGeojson, 'radius': 5, 'capacity': 'ALUNNI', 'description': ['DENOMINAZIONESCUOLA', 'DESCRIZIONETIPOLOGIAGRADOISTRUZIONESCUOLA', 'ORDINESCUOLA', 'Affluenza', 'ALUNNI', 'myRatio']}
 ];
 
 //data preprocessing
 parameters.forEach((p) => {
     if (p.capacity !== undefined) {
 	if (p.geojson.features.filter((f) => isNaN(f.properties[p.capacity])).length === 0) {
-	    p.geojson.features.forEach((f) => f.properties['myRatio'] = f.properties['Affluenza']/f.properties[p.capacity])
+	    p.geojson.features.forEach((f) => f.properties['myRatio'] = Math.floor(100*f.properties['Affluenza']/f.properties[p.capacity])/100)
 	    return;
 	} 	    
     } 
@@ -51,7 +51,8 @@ const getLayer = (l) => {
             'circle-opacity': 1,
             'circle-radius': l.radius,
             'circle-stroke-width': 1
-        }
+        },
+	'description': l.description
     }
 };
 
@@ -90,7 +91,7 @@ class App extends Component {
         map.on('mouseenter', layer.id, function(e) {
             map.getCanvas().style.cursor = 'pointer';
             var coordinates = e.features[0].geometry.coordinates.slice();
-            var description = Object.keys(e.features[0].properties).map(p=> p + ": " + e.features[0].properties[p]).join("<br>");
+            var description = layer.description.map((p) => p + ": " + e.features[0].properties[p]).join("<br>");
             popup.setLngLat(coordinates)
                 .setHTML(description)
                 .addTo(map);
