@@ -10,85 +10,56 @@ import farmacieGeojson from './data/Milano_farmacie.js';
 import bibliotecheGeojson from './data/Milano_biblioteche.js';
 import scuoleGeojson from './data/Milano_scuole.js';
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiZW5qYWxvdCIsImEiOiJjaWhtdmxhNTIwb25zdHBsejk0NGdhODJhIn0.2-F2hS_oTZenAWc0BMf_uw';
+const parameters = [
+    {'id': 'UnitaFarmacie', 'label': 'Farmacie', 'geojson': farmacieGeojson, 'radius': 5},
+    {'id': 'UnitaTrasporti', 'label': 'Trasporti', 'geojson': trasportiGeojson, 'radius': 3},
+    {'id': 'UnitaBiblioteche', 'label': 'Biblioteche', 'geojson': bibliotecheGeojson, 'radius': 5},
+    {'id': 'UnitaScuole', 'label': 'Scuole', 'geojson': scuoleGeojson, 'radius': 5, 'capacity': 'ALUNNI'}
+];
 
+//data preprocessing
+parameters.forEach((p) => {
+    if (p.capacity !== undefined) {
+	if (p.geojson.features.filter((f) => isNaN(f.properties[p.capacity])).length === 0) {
+	    p.geojson.features.forEach((f) => f.properties['myRatio'] = f.properties['Affluenza']/f.properties[p.capacity])
+	    return;
+	} 	    
+    } 
+    p.geojson.features.forEach((f) => f.properties['myRatio'] = f.properties['Affluenza']);
+});
+
+const stops = (geojson, property) => {
+    return [[0, 'blue'], [Math.max(...geojson.features.map((f) => f.properties[property])), 'red']];
+};
+
+const getLayer = (l) => {
+    return {
+        'id': l.id,
+        'label': l.label,
+        'geojson': l.geojson,
+        'geojsonProperty': 'myRatio',
+        'type': 'circle',
+        'source': l.id,
+        'layout': {
+            'visibility': 'none'
+        },
+        'paint': {
+            'circle-color': {
+                property: 'myRatio',
+                stops: stops(l.geojson, 'myRatio')
+            },
+            'circle-opacity': 1,
+            'circle-radius': l.radius,
+            'circle-stroke-width': 1
+        }
+    }
+};
+
+//data visualization
+mapboxgl.accessToken = 'pk.eyJ1IjoiZW5qYWxvdCIsImEiOiJjaWhtdmxhNTIwb25zdHBsejk0NGdhODJhIn0.2-F2hS_oTZenAWc0BMf_uw';
 class App extends Component {
     map;
-
-    layers = [{
-        'id': 'UnitaFarmacie',
-	'label': 'Farmacie',
-        'geojson': farmacieGeojson,
-        'geojsonProperty': 'Affluenza',
-        'type': 'circle',
-        'source': 'UnitaFarmacie',
-        'layout': {
-            'visibility': 'none'
-        },
-        'paint': {
-            'circle-color': {
-		property: 'Affluenza',
-		stops: [[0, 'blue'], [Math.max(...farmacieGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
-	    },
-            'circle-opacity': 1,
-            'circle-radius': 5,
-            'circle-stroke-width': 1
-        }
-    },{
-        'id': 'UnitaTrasporti',
-	'label': 'Trasporti',
-        'geojson': trasportiGeojson,
-        'geojsonProperty': 'Affluenza',
-        'type': 'circle',
-        'source': 'UnitaTrasporti',
-        'layout': {
-            'visibility': 'none'
-        },
-        'paint': {
-	    'circle-color': {
-                property: 'Affluenza',
-		stops: [[0, 'blue'], [Math.max(...trasportiGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
-            },
-            'circle-radius': 3,
-            'circle-stroke-width': 1
-        }
-    },{
-        'id': 'UnitaBiblioteche',
-        'label': 'Biblioteche',
-        'geojson': bibliotecheGeojson,
-        'geojsonProperty': 'Affluenza',
-        'type': 'circle',
-        'source': 'UnitaBiblioteche',
-        'layout': {
-            'visibility': 'none'
-        },
-        'paint': {
-            'circle-color': {
-                property: 'Affluenza',
-                stops: [[0, 'blue'], [Math.max(...bibliotecheGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
-            },
-            'circle-radius': 5,
-            'circle-stroke-width': 1
-        }
-    },{
-        'id': 'UnitaScuole',
-        'label': 'Scuole',
-        'geojson': scuoleGeojson,
-        'geojsonProperty': 'Affluenza',
-        'type': 'circle',
-        'source': 'UnitaScuole',
-        'layout': {
-            'visibility': 'none'
-        },
-        'paint': {
-            'circle-color': {
-                property: 'Affluenza',
-                stops: [[0, 'blue'], [Math.max(...scuoleGeojson.features.map((f) => f.properties['Affluenza'])), 'red']]
-            },
-            'circle-radius': 5,
-            'circle-stroke-width': 1
-        }
-    }];
+    layers = parameters.map((p) => getLayer(p));
 
     constructor(props: Props) {
 	super(props);
