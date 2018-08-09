@@ -18,6 +18,7 @@ const parameters = [
 ];
 
 //data preprocessing
+//defining property myRatio
 parameters.forEach((p) => {
     if (p.capacity !== undefined) {
 	if (p.geojson.features.filter((f) => isNaN(f.properties[p.capacity])).length === 0) {
@@ -58,6 +59,7 @@ const getLayer = (l) => {
 
 //data visualization
 mapboxgl.accessToken = 'pk.eyJ1IjoiZW5qYWxvdCIsImEiOiJjaWhtdmxhNTIwb25zdHBsejk0NGdhODJhIn0.2-F2hS_oTZenAWc0BMf_uw';
+
 class App extends Component {
     map;
     layers = parameters.map((p) => getLayer(p));
