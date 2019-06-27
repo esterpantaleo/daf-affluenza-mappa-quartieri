@@ -1,5 +1,5 @@
 # Introduction
-A visualizaztion showing how many people access services in the neighborhoods of Milan, Italy
+A visualization showing how many people access services in the neighborhoods of Milan, Italy
 
 ## Additional information
 The visualization uses React and has been built with [Create React App](https://github.com/facebookincubator/create-react-app).
